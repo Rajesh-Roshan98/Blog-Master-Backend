@@ -1,5 +1,4 @@
 const express = require('express');
-const serverlessExpress = require('@vendia/serverless-express');
 require('dotenv').config();
 const { dbConnect } = require('../config/dbConnect');
 const blogRoutes = require('../routes/blogRoutes');
@@ -24,4 +23,6 @@ app.use('/api/blogs', blogRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/contact', contactRoutes);
 
-module.exports = serverlessExpress({ app });
+module.exports = (req, res) => {
+  app(req, res);
+};
