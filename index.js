@@ -1,3 +1,6 @@
+// This file is no longer used for Vercel deployment.
+// The Express app is now handled in api/index.js for serverless deployment.
+
 const express = require('express');
 require('dotenv').config();
 const { dbConnect } = require('./config/dbConnect');
