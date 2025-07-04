@@ -19,7 +19,6 @@
   },
   "homepage": "https://github.com/Samael-eng/Blog_Management_Backend#readme",
   "dependencies": {
-    "@vendia/serverless-express": "^4.12.6",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
