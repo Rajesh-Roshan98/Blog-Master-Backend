@@ -10,7 +10,12 @@ const cors = require('cors');
 const app = express();
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://rajesh-roshan98.github.io'],
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://rajesh-roshan98.github.io',
+    'https://blog-master-frontend-beta.vercel.app'
+  ],
   credentials: true
 }));
 
