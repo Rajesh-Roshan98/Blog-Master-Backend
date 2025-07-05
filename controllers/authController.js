@@ -89,7 +89,7 @@ exports.loginUser = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       sameSite: "strict",
-      secure: false, 
+      secure: true, // must be true for HTTPS/Vercel
       maxAge: 24 * 60 * 60 * 1000
     });
 
