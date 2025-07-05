@@ -10,6 +10,7 @@ const createToken = (userId) => {
   });
 };
 
+// 1. Send OTP
 exports.sendOtp = async (req, res) => {
   try {
     let { email } = req.body;
@@ -36,14 +37,15 @@ exports.sendOtp = async (req, res) => {
   }
 };
 
+// 2. Sign up
 exports.createUser = async (req, res) => {
   try {
     let { firstname, middlename, lastname, email, password, gender, otp } = req.body;
-    if (email) email = email.trim().toLowerCase();
-    if (firstname) firstname = firstname.trim();
-    if (middlename) middlename = middlename.trim();
-    if (lastname) lastname = lastname.trim();
-    if (password) password = password.trim();
+    email = email?.trim().toLowerCase();
+    firstname = firstname?.trim();
+    middlename = middlename?.trim();
+    lastname = lastname?.trim();
+    password = password?.trim();
 
     if (!firstname || !lastname || !email || !password || !gender || !otp) {
       return res.status(400).json({ success: false, message: "All fields and OTP are required" });
@@ -69,12 +71,12 @@ exports.createUser = async (req, res) => {
   }
 };
 
-
+// 3. Login
 exports.loginUser = async (req, res) => {
   try {
     let { email, password } = req.body;
-    if (email) email = email.trim().toLowerCase();
-    if (password) password = password.trim();
+    email = email?.trim().toLowerCase();
+    password = password?.trim();
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: "Email and password are required" });
@@ -88,12 +90,11 @@ exports.loginUser = async (req, res) => {
     const token = createToken(user._id);
     res.cookie("token", token, {
       httpOnly: true,
-      sameSite: "strict",
-      secure: true, // must be true for HTTPS/Vercel
+      sameSite: "None", // ✅ Important for cross-origin
+      secure: true,     // ✅ Required for SameSite=None
       maxAge: 24 * 60 * 60 * 1000
     });
 
-    // Send user info (excluding sensitive fields) along with login response
     const { _id, firstname, middlename, lastname, email: userEmail, gender, avatar } = user;
     res.status(200).json({
       success: true,
@@ -106,7 +107,7 @@ exports.loginUser = async (req, res) => {
         lastname,
         email: userEmail,
         gender,
-        avatar: avatar || null // avatar field if present
+        avatar: avatar || null
       }
     });
 
@@ -116,7 +117,7 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-
+// 4. Logout
 exports.logoutUser = (req, res) => {
   res.clearCookie("token");
   res.status(200).json({ success: true, message: "Logout successful" });
@@ -158,9 +159,9 @@ exports.changePassword = async (req, res) => {
     }
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-    const isMatch = await require('bcrypt').compare(currentPassword, user.password);
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) return res.status(401).json({ success: false, message: 'Current password is incorrect' });
-    user.password = await require('bcrypt').hash(newPassword, 10);
+    user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
     res.json({ success: true, message: 'Password changed successfully' });
   } catch (e) {
