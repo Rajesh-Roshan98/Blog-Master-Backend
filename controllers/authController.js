@@ -67,6 +67,7 @@ exports.createUser = async (req, res) => {
     return res.status(201).json({ success: true, message: "User created successfully" });
 
   } catch (e) {
+    console.error("Create user error:", e);
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
@@ -88,10 +89,12 @@ exports.loginUser = async (req, res) => {
     }
 
     const token = createToken(user._id);
+
+    // Secure cookie settings
     res.cookie("token", token, {
       httpOnly: true,
-      sameSite: "None", // ✅ Important for cross-origin
-      secure: true,     // ✅ Required for SameSite=None
+      secure: true, // Required for cross-site cookies on HTTPS
+      sameSite: "None", // Required for cross-origin cookies
       maxAge: 24 * 60 * 60 * 1000
     });
 
@@ -119,17 +122,30 @@ exports.loginUser = async (req, res) => {
 
 // 4. Logout
 exports.logoutUser = (req, res) => {
-  res.clearCookie("token");
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None"
+  });
   res.status(200).json({ success: true, message: "Logout successful" });
 };
 
 // 5. Get Profile
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-password');
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-    res.json({ success: true, user });
+    // Fallback: if middleware didn't run or req.user is missing
+    if (!req.user && req.cookies.token) {
+      const decoded = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.id).select("-password");
+    }
+
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: No token provided' });
+    }
+
+    res.json({ success: true, user: req.user });
   } catch (e) {
+    console.error("Profile fetch error:", e);
     res.status(500).json({ success: false, message: 'Failed to fetch profile' });
   }
 };
@@ -142,10 +158,16 @@ exports.updateProfile = async (req, res) => {
     allowed.forEach(field => {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     });
-    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, select: '-password' });
+
+    const user = await User.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+      select: '-password'
+    });
+
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     res.json({ success: true, user });
   } catch (e) {
+    console.error("Update profile error:", e);
     res.status(500).json({ success: false, message: 'Failed to update profile' });
   }
 };
@@ -157,14 +179,21 @@ exports.changePassword = async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ success: false, message: 'Current and new password required' });
     }
+
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
     const isMatch = await bcrypt.compare(currentPassword, user.password);
-    if (!isMatch) return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+    }
+
     user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
+
     res.json({ success: true, message: 'Password changed successfully' });
   } catch (e) {
+    console.error("Change password error:", e);
     res.status(500).json({ success: false, message: 'Failed to change password' });
   }
 };
@@ -173,9 +202,14 @@ exports.changePassword = async (req, res) => {
 exports.deleteAccount = async (req, res) => {
   try {
     await User.findByIdAndDelete(req.user._id);
-    res.clearCookie('token');
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'None'
+    });
     res.json({ success: true, message: 'Account deleted successfully' });
   } catch (e) {
+    console.error("Delete account error:", e);
     res.status(500).json({ success: false, message: 'Failed to delete account' });
   }
 };
