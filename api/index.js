@@ -35,6 +35,8 @@ app.get('/', (req, res) => {
 
 // Handle favicon.ico requests with a 204 No Content
 app.get('/favicon.ico', (req, res) => res.status(204).end());
+// Handle favicon.png requests with a 204 No Content
+app.get('/favicon.png', (req, res) => res.status(204).end());
 
 module.exports = (req, res) => {
   app(req, res);
