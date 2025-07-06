@@ -9,6 +9,7 @@ const cors = require('cors');
 
 const app = express();
 
+// CORS Setup
 app.use(cors({
   origin: [
     'http://localhost:5173',
@@ -22,22 +23,32 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json());
 
-dbConnect();
+// ✅ Middleware to ensure DB connection on every request (required for Vercel)
+app.use(async (req, res, next) => {
+  try {
+    await dbConnect();
+    next();
+  } catch (err) {
+    console.error("❌ DB connection error in middleware:", err.message);
+    res.status(500).json({ success: false, message: 'Database connection failed' });
+  }
+});
 
+// ✅ API Routes
 app.use('/api/blogs', blogRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/contact', contactRoutes);
 
-// Root route for health check or friendly message
+// ✅ Health check
 app.get('/', (req, res) => {
-  res.send('API is running!');
+  res.send('🚀 API is running!');
 });
 
-// Handle favicon.ico requests with a 204 No Content
+// ✅ Handle favicon requests
 app.get('/favicon.ico', (req, res) => res.status(204).end());
-// Handle favicon.png requests with a 204 No Content
 app.get('/favicon.png', (req, res) => res.status(204).end());
 
+// ✅ Vercel handler export
 module.exports = (req, res) => {
   app(req, res);
 };

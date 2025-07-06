@@ -3,6 +3,7 @@ const Otp = require('../model/otpModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const sendVerificationEmail = require('../utils/sendEmail');
+const { dbConnect } = require('../config/dbConnect'); // ✅ Import connection function
 
 const createToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -13,6 +14,8 @@ const createToken = (userId) => {
 // 1. Send OTP
 exports.sendOtp = async (req, res) => {
   try {
+    await dbConnect(); // ✅ Ensure DB connection
+
     let { email } = req.body;
     if (email) email = email.trim().toLowerCase();
 
@@ -40,6 +43,8 @@ exports.sendOtp = async (req, res) => {
 // 2. Sign up
 exports.createUser = async (req, res) => {
   try {
+    await dbConnect();
+
     let { firstname, middlename, lastname, email, password, gender, otp } = req.body;
     email = email?.trim().toLowerCase();
     firstname = firstname?.trim();
@@ -75,6 +80,8 @@ exports.createUser = async (req, res) => {
 // 3. Login
 exports.loginUser = async (req, res) => {
   try {
+    await dbConnect();
+
     let { email, password } = req.body;
     email = email?.trim().toLowerCase();
     password = password?.trim();
@@ -90,11 +97,10 @@ exports.loginUser = async (req, res) => {
 
     const token = createToken(user._id);
 
-    // Secure cookie settings
     res.cookie("token", token, {
       httpOnly: true,
-      secure: true, // Required for cross-site cookies on HTTPS
-      sameSite: "None", // Required for cross-origin cookies
+      secure: true,
+      sameSite: "None",
       maxAge: 24 * 60 * 60 * 1000
     });
 
@@ -121,7 +127,9 @@ exports.loginUser = async (req, res) => {
 };
 
 // 4. Logout
-exports.logoutUser = (req, res) => {
+exports.logoutUser = async (req, res) => {
+  await dbConnect();
+
   res.clearCookie("token", {
     httpOnly: true,
     secure: true,
@@ -133,7 +141,8 @@ exports.logoutUser = (req, res) => {
 // 5. Get Profile
 exports.getProfile = async (req, res) => {
   try {
-    // Fallback: if middleware didn't run or req.user is missing
+    await dbConnect();
+
     if (!req.user && req.cookies.token) {
       const decoded = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
       req.user = await User.findById(decoded.id).select("-password");
@@ -153,6 +162,8 @@ exports.getProfile = async (req, res) => {
 // 6. Update Profile
 exports.updateProfile = async (req, res) => {
   try {
+    await dbConnect();
+
     const updates = {};
     const allowed = ['firstname', 'middlename', 'lastname', 'gender', 'avatar'];
     allowed.forEach(field => {
@@ -175,6 +186,8 @@ exports.updateProfile = async (req, res) => {
 // 7. Change Password
 exports.changePassword = async (req, res) => {
   try {
+    await dbConnect();
+
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ success: false, message: 'Current and new password required' });
@@ -201,6 +214,8 @@ exports.changePassword = async (req, res) => {
 // 8. Delete Account
 exports.deleteAccount = async (req, res) => {
   try {
+    await dbConnect();
+
     await User.findByIdAndDelete(req.user._id);
     res.clearCookie('token', {
       httpOnly: true,
