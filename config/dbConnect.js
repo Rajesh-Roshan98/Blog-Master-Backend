@@ -6,15 +6,25 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
 
-exports.dbConnect = async () => {
-  if (cached.conn) {
-    return cached.conn;
+const connectWithRetry = async (retries = 3, delay = 1000) => {
+  while (retries > 0) {
+    try {
+      return await mongoose.connect(process.env.DB_URL, {
+        bufferCommands: false,
+      });
+    } catch (err) {
+      retries--;
+      if (retries === 0) throw err;
+      await new Promise((res) => setTimeout(res, delay));
+    }
   }
+};
+
+exports.dbConnect = async () => {
+  if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(process.env.DB_URL, {
-      bufferCommands: false, 
-    });
+    cached.promise = connectWithRetry(); 
   }
 
   try {
